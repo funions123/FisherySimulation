@@ -34,11 +34,13 @@ int main()
 
     if (choice == 1)
     {
-
+        printf("Year | Fish Stock | Harvest Rate\n");
+        printf("--------------------------------------------------\n");
+        printf("%4d | %14.4f | %10.4f\n", 0, myFishery.getFishStock(), myFishingIndustry.getSimpleHarvestRate());
     }
     else if (choice == 2)
     {
-        printf("Year | Population (n) | Effort (E)\n");
+        printf("Year | Fish Stock | Effort\n");
         printf("--------------------------------------------------\n");
         printf("%4d | %14.4f | %10.4f\n", 0, myFishery.getFishStock(), myFishingIndustry.getHarvestingEffort());
     }
