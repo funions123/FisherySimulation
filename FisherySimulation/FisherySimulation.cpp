@@ -27,7 +27,7 @@ double SimpleModelGrowthAmount(Fishery& fishery, FishingIndustry& fishingindustr
 *   @param fishery The fishery being simulated
 *   @param fishingindustry The fishing industry harvesting from the fishery
 */
-void DelayEquationModelStep(Fishery& fishery, FishingIndustry& fishingindustry)
+void DelayEquationModelStep(Fishery& fishery, FishingIndustry& fishingindustry, double timeStep)
 {
     double n = fishery.getFishStock();
     double E = fishingindustry.getHarvestingEffort();
@@ -47,9 +47,9 @@ void DelayEquationModelStep(Fishery& fishery, FishingIndustry& fishingindustry)
     double dS_dt = fishingindustry.getCatchStockingRate() * currentCatch - fishingindustry.getStockReturnRate() * S;
 
     //update the state variables using a simple forward Euler step (assuming Δt = 1).
-    fishery.setFishStock(std::max(0.0, fishery.getFishStock() + dn_dt));
-    fishingindustry.setHarvestingEffort(std::max(0.0, fishingindustry.getHarvestingEffort() + dE_dt));
-    fishingindustry.setFishMarketStock(std::max(0.0, (fishingindustry.getFishMarketStock() + dS_dt)));
+    fishery.setFishStock(std::max(0.0, n + dn_dt * timeStep));
+    fishingindustry.setHarvestingEffort(std::max(0.0, E + dE_dt * timeStep));
+    fishingindustry.setFishMarketStock(std::max(0.0, S + dS_dt * timeStep));
 
     return;
 }
@@ -110,6 +110,8 @@ int main()
         Fishery myFishery = Fishery();
         FishingIndustry myFishingIndustry = FishingIndustry();
         int simulationYears = 20;
+        int stepsPerYear = 100; //using sub-year steps
+        double timeStep = 1.0 / stepsPerYear;
 
         //test init based on sample parameters from the paper
         myFishery.setSimpleReproductionRate(1.0);
@@ -130,7 +132,9 @@ int main()
 
         //run the simulation loop
         for (int year = 1; year <= simulationYears; ++year) {
-            DelayEquationModelStep(myFishery, myFishingIndustry);
+            for (int i = 0; i < stepsPerYear; ++i) {
+                DelayEquationModelStep(myFishery, myFishingIndustry, timeStep);
+            }
             printf("%4d | %14.4f | %10.4f | %16.4f\n", year, myFishery.getFishStock(), myFishingIndustry.getHarvestingEffort(), myFishingIndustry.getFishMarketStock());
         }
     }
