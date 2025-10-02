@@ -85,15 +85,15 @@ int main()
         Fishery myFishery = Fishery();
         FishingIndustry myFishingIndustry = FishingIndustry();
         int simulationYears = 15;
-        
-        //test init
+
+        //init
         myFishery.setSimpleCarryingCapacity(12000.0); //12k tons
         myFishery.setSimpleReproductionRate(1.0);
         myFishery.setFishStock(10000.0); //10k tons
         myFishingIndustry.setSimpleHarvestRate(2000.0); //2k tons
 
         std::cout << "--- Simple Logistic Model Simulation ---" << std::endl;
-        printf("Year | Fish Stock (tons)\n");
+        printf("Year | Fish Stock (thousand tonnes)\n");
         printf("--------------------------------------\n");
         printf("%4d | %f\n", 0, myFishery.getFishStock());
 
@@ -109,9 +109,9 @@ int main()
         // --- Delay Equation Model Simulation ---
         Fishery myFishery = Fishery();
         FishingIndustry myFishingIndustry = FishingIndustry();
-        int simulationYears = 20;
+        int simulationYears = 100;
 
-        //test init based on sample parameters from the paper
+        //init based on sample parameters from the paper
         myFishery.setSimpleReproductionRate(1.0);
         myFishery.setCatchability(2.0);
         myFishery.setFishStock(0.4);
