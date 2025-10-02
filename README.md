@@ -2,11 +2,17 @@
 
 # Project Status
 Command-line Interface - Mostly Implemented
+
 Core Simulation Loop - Partially Implemented
+
 Simple Logistic Model - Mostly Implemented
+
 Delay Equation Model - Partially Implemented
+
 JABBA-based Model - Not yet started
+
 JSON Parameter Parse Functionality - Not yet started
+
 Simulation Validation and Tuning - Not yet started
 
 More details on the Trello board.
