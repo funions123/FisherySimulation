@@ -1,13 +1,13 @@
 # FisherySimulation
 
 # Project Status
-Command-line Interface - Mostly Implemented
+Command-line Interface - Fully Implemented
 
-Core Simulation Loop - Partially Implemented
+Core Simulation Loop - Mostly Implemented
 
 Simple Logistic Model - Mostly Implemented
 
-Delay Equation Model - Partially Implemented
+Delay Equation Model - Mostly Implemented
 
 JABBA-based Model - Not yet started
 
@@ -22,6 +22,8 @@ More details on the Trello board.
 To build and run this repository, simply clone it into a folder then use the .sln file to create a Visual Studio project. 
 - You can drag-and-drop the .sln file into a Visual Studio window, and it will automatically prompt you to set up the project.
 Once this is done, you will be able to compile and run the project from source using the visual studio build/debug buttons.
+
+Alternatively, you can compile the raw source using any C++ compiler if you are proficient at that.
 
 - To be added: A complete build and install consisting of a command-line executable and portable data folder
 
