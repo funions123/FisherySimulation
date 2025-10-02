@@ -1,4 +1,4 @@
-
+﻿
 #include <iostream>
 #include "Fishery.h"
 #include "FishingIndustry.h"
@@ -6,8 +6,8 @@
 int main()
 {
     //hard-coded simulation setup for testing purposes
-    Fishery myFishery(12000.0, 9000.0, 1.0);
-    FishingIndustry myFishingIndustry(2000, 0.4);
+    Fishery myFishery();
+    FishingIndustry myFishingIndustry();
 
     int choice = 0;
 
@@ -74,8 +74,30 @@ double SimpleModelGrowthAmount(Fishery& fishery, FishingIndustry& fishingindustr
 
 /*  @brief Simulates a growth and harvesting step in the fishery
 *   This function implements a system of delay equations
+*   @param fishery The fishery being simulated
+*   @param fishingindustry The fishing industry harvesting from the fishery
 */
-double DelayEquationModelGrowthAmount(Fishery& fishery, FishingIndustry& fishingindustry)
+void DelayEquationModelGrowthAmount(Fishery& fishery, FishingIndustry& fishingindustry)
 {
+    double n = fishery.getFishStock();
+    double E = fishingindustry.getHarvestingEffort();
+    double S = fishingindustry.getFishMarketStock();
 
+    //step catch - equation 1
+    double currentCatch = fishery.getCatchability() * n * E;
+
+    //calculate the rate of change for each variable
+    //dn/dt = rn(1-n) - qnE
+    double dn_dt = fishery.getSimpleReproductionRate() * n * (1 - n) - currentCatch;
+
+    //dE/dt = p((1-η)qnE + δS) - cE
+    double dE_dt = fishingindustry.getFishPrice() * ((1 - fishingindustry.getCatchStockingRate()) * currentCatch + fishingindustry.getStockReturnRate() * S) - fishingindustry.getFishingCost() * E;
+
+    //dS/dt = ηqnE - δS
+    double dS_dt = fishingindustry.getCatchStockingRate() * currentCatch - fishingindustry.getStockReturnRate() * S;
+
+    //update the state variables using a simple forward Euler step (assuming Δt = 1).
+    fishery.setFishStock(std::max(0.0, fishery.getFishStock() + dn_dt));
+    fishingindustry.setHarvestingEffort(std::max(0.0, fishingindustry.getHarvestingEffort() + dE_dt));
+    fishingindustry.setFishMarketStock(std::max(0.0, (fishingindustry.getFishMarketStock() + dS_dt))
 }
