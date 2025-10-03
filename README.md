@@ -16,7 +16,7 @@ JSON Parameter Parse Functionality - Not yet started
 Simulation Validation and Tuning - Not yet started
 
 More details on the Trello board.
-- https://trello.com/invite/b/68dd7eea945acf70ccdc51bd/ATTI725c6fb9c662f3a8811a6feeaec16950F0B5D976/fishery-simulator-management-board
+- https://trello.com/b/SfdKqYDU/fishery-simulator-management-board
 
 # Installation Instructions
 To build and run this repository, simply clone it into a folder then use the .sln file to create a Visual Studio project. 
