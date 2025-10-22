@@ -2,6 +2,29 @@
 #include <iostream>
 #include "Fishery.h"
 #include "FishingIndustry.h"
+#include "CSVManager.h"
+
+#ifdef _WIN32 //windows
+#include <direct.h>
+#define GetCurrentDir _getcwd
+#else
+#include <unistd.h> //linux
+#define GetCurrentDir getcwd
+#endif
+
+/**
+ * @brief Gets the current working directory.
+ * @return A string with the path to the current working directory.
+ */
+std::string getCurrentWorkingDirectory() {
+    char buff[FILENAME_MAX];
+    if (GetCurrentDir(buff, FILENAME_MAX)) {
+        std::string current_working_dir(buff);
+        return current_working_dir;
+    }
+    // Return a fallback message if CWD can't be found
+    return "[current application directory]";
+}
 
 /*  @brief Simulates a growth and harvesting step in the fishery
 *   This function utilizes a basic model with a logistic growth simulation
@@ -85,6 +108,13 @@ int main()
         Fishery myFishery = Fishery();
         FishingIndustry myFishingIndustry = FishingIndustry();
         int simulationYears = 15;
+
+
+        //data logging
+        std::string filename = "simple_model_simulation.csv";
+        CSVManager logger;
+        logger.open("simple_model_simulation.csv");
+        logger.writeHeader("Year,FishStock_tons"); 
         
         //test init
         myFishery.setSimpleCarryingCapacity(12000.0); //12k tons
@@ -96,13 +126,17 @@ int main()
         printf("Year | Fish Stock (tons)\n");
         printf("--------------------------------------\n");
         printf("%4d | %f\n", 0, myFishery.getFishStock());
+        logger.writeRow(0, myFishery.getFishStock()); //log initial state
 
         //run the simulation loop
         for (int year = 1; year <= simulationYears; ++year) {
             double growth = SimpleModelGrowthAmount(myFishery, myFishingIndustry);
             myFishery.setFishStock(std::max(0.0, myFishery.getFishStock() + growth));
             printf("%4d | %f\n", year, myFishery.getFishStock());
+            logger.writeRow(year, myFishery.getFishStock()); //log step
         }
+        logger.close();
+        std::cout << "\nSimulation results saved to:\n" << getCurrentWorkingDirectory() << "/" << filename << std::endl;
     }
     else if (choice == 2)
     {
@@ -112,6 +146,13 @@ int main()
         int simulationYears = 20;
         int stepsPerYear = 100; //using sub-year steps
         double timeStep = 1.0 / stepsPerYear;
+        double currentTime = 0.0;
+
+        //data logging
+        std::string filename = "delay_model_simulation.csv";
+        CSVManager logger;
+        logger.open("delay_model_simulation.csv");
+        logger.writeHeader("Time_Year,Population_n,Effort_E,MarketStock_S");
 
         //test init based on sample parameters from the paper
         myFishery.setSimpleReproductionRate(1.0);
@@ -129,14 +170,19 @@ int main()
         printf("Year | Population (n) | Effort (E) | Market Stock (S)\n");
         printf("----------------------------------------------------------\n");
         printf("%4d | %14.4f | %10.4f | %16.4f\n", 0, myFishery.getFishStock(), myFishingIndustry.getHarvestingEffort(), myFishingIndustry.getFishMarketStock());
+        logger.writeRow(currentTime, myFishery.getFishStock(), myFishingIndustry.getHarvestingEffort(), myFishingIndustry.getFishMarketStock()); // Log initial state
 
         //run the simulation loop
         for (int year = 1; year <= simulationYears; ++year) {
             for (int i = 0; i < stepsPerYear; ++i) {
                 DelayEquationModelStep(myFishery, myFishingIndustry, timeStep);
+                currentTime += timeStep;
+                logger.writeRow(currentTime, myFishery.getFishStock(), myFishingIndustry.getHarvestingEffort(), myFishingIndustry.getFishMarketStock());
             }
             printf("%4d | %14.4f | %10.4f | %16.4f\n", year, myFishery.getFishStock(), myFishingIndustry.getHarvestingEffort(), myFishingIndustry.getFishMarketStock());
         }
+        logger.close();
+        std::cout << "\nSimulation results saved to:\n" << getCurrentWorkingDirectory() << "/" << filename << std::endl;
     }
 
     std::cout << "\nSimulation finished. Press Enter to exit." << std::endl;

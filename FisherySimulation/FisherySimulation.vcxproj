@@ -127,14 +127,13 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="Fishery.cpp" />
-    <ClCompile Include="FisherySimulation.cpp" />
-    <ClCompile Include="FishingIndustry.cpp" />
-  </ItemGroup>
-  <ItemGroup>
     <ClInclude Include="..\..\..\..\..\..\Bathsalts\Engine\Types\nlohmann\json.h" />
+    <ClInclude Include="CSVManager.h" />
     <ClInclude Include="Fishery.h" />
     <ClInclude Include="FishingIndustry.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="FisherySimulation.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
