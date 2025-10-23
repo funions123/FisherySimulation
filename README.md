@@ -2,15 +2,22 @@
 
 # Project Status
 Command-line Interface - Fully Implemented
+
 Core Simulation Loop - Fully Implemented
+
 Simple Logistic Model - Fully Implemented
+
 Delay Equation Model - Fully Implemented
+
 Age-structured operating model - Fully Implemented
+
 JSON Parameter Parse Functionality - Fully Implemented
+
 CSV Data logging - Fully Implemented
 
 MAJOR TODO:
 JABBA-based Validation Testing
+
 Simulation Validation and Tuning
 
 More details on the Trello board.
