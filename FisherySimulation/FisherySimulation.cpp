@@ -215,6 +215,8 @@ int main()
         myFishery.setFishStock(10000.0); //10k tons
         myFishingIndustry.setSimpleHarvestRate(2000.0); //2k tons
 
+        auto start = std::chrono::high_resolution_clock::now();
+
         std::cout << "--- Simple Logistic Model Simulation ---" << std::endl;
         printf("Year | Fish Stock (tons)\n");
         printf("--------------------------------------\n");
@@ -228,7 +230,15 @@ int main()
             printf("%4d | %f\n", year, myFishery.getFishStock());
             logger.writeRow(year, myFishery.getFishStock()); //log step
         }
+
+        auto end = std::chrono::high_resolution_clock::now();
+        std::chrono::duration<double, std::milli> duration = end - start;
+
+        printf("Simulation duration (ms): %f\n", duration.count());
+
         logger.close();
+        
+
         std::cout << "\nSimulation results saved to:\n" << getCurrentWorkingDirectory() << "/" << filename << std::endl;
     }
     else if (choice == 2)
@@ -260,6 +270,8 @@ int main()
         myFishingIndustry.setHarvestingEffort(0.4);     //effort (E)
         myFishingIndustry.setFishMarketStock(0.1);      //market stock (S)
 
+        auto start = std::chrono::high_resolution_clock::now();
+
         std::cout << "--- Delay Equation Model Simulation ---" << std::endl;
         printf("Year | Population (n) | Effort (E) | Market Stock (S)\n");
         printf("----------------------------------------------------------\n");
@@ -275,6 +287,12 @@ int main()
             }
             printf("%4d | %14.4f | %10.4f | %16.4f\n", year, myFishery.getFishStock(), myFishingIndustry.getHarvestingEffort(), myFishingIndustry.getFishMarketStock());
         }
+
+        auto end = std::chrono::high_resolution_clock::now();
+        std::chrono::duration<double, std::milli> duration = end - start;
+
+        printf("Simulation duration (ms): %f\n", duration.count());
+
         logger.close();
         std::cout << "\nSimulation results saved to:\n" << getCurrentWorkingDirectory() << "/" << filename << std::endl;
     }
