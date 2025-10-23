@@ -1,0 +1,22 @@
+{
+	"simpleModel": {
+		"simulationYears": 15,
+		"carryingCapacity": 12000.0,
+		"reproductionRate": 1.0,
+		"initialFishStock": 10000.0,
+		"harvestRate": 2000.0
+	},
+	"delayModel": {
+		"simulationYears": 20,
+		"stepsPerYear": 100,
+		"reproductionRate": 1.0,
+		"catchability": 2.0,
+		"initialFishStock": 0.4,
+		"fishPrice": 7.0,
+		"fishingCost": 1.0,
+		"stockReturnRate": 2.0,
+		"catchStockingRate": 0.5,
+		"initialHarvestingEffort": 0.4,
+		"initialFishMarketStock": 0.1
+	}
+}

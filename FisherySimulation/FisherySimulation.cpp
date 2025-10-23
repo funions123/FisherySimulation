@@ -3,6 +3,9 @@
 #include "Fishery.h"
 #include "FishingIndustry.h"
 #include "CSVManager.h"
+#include <chrono>
+#include <sstream> 
+#include "json.h" //slightly modified nlohmann json all-in-one header
 
 #ifdef _WIN32 //windows
 #include <direct.h>
@@ -12,18 +15,107 @@
 #define GetCurrentDir getcwd
 #endif
 
+using json = nlohmann::json;
+
+/**
+ * @brief Loads simulation parameters from a JSON file.
+ * @param filename The name of the JSON configuration file.
+ * @param fishery The fishery object to populate.
+ * @param industry The fishing industry object to populate.
+ * @param modelChoice 1 for Simple Model, 2 for Delay Model.
+ * @param outSimYears (Output) The number of simulation years.
+ * @param outStepsPerYear (Output) The number of steps per year (for delay model).
+ * @return True if parameters were loaded successfully, false otherwise.
+ */
+bool loadParametersFromJSON(const std::string& filename, Fishery& fishery, FishingIndustry& industry, int modelChoice, int& outSimYears, int& outStepsPerYear)
+{
+    std::ifstream f(filename);
+    if (!f.is_open()) {
+        std::cerr << "Error: Could not open parameter file: " << filename << std::endl;
+        return false;
+    }
+
+    try {
+        json params = json::parse(f);
+
+        if (modelChoice == 1) {
+            auto modelParams = params.at("simpleModel");
+            outSimYears = modelParams.at("simulationYears").get<int>();
+            fishery.setSimpleCarryingCapacity(modelParams.at("carryingCapacity").get<double>());
+            fishery.setSimpleReproductionRate(modelParams.at("reproductionRate").get<double>());
+            fishery.setFishStock(modelParams.at("initialFishStock").get<double>());
+            industry.setSimpleHarvestRate(modelParams.at("harvestRate").get<double>());
+        }
+        else if (modelChoice == 2) {
+            auto modelParams = params.at("delayModel");
+            outSimYears = modelParams.at("simulationYears").get<int>();
+            outStepsPerYear = modelParams.at("stepsPerYear").get<int>();
+            fishery.setSimpleReproductionRate(modelParams.at("reproductionRate").get<double>());
+            fishery.setCatchability(modelParams.at("catchability").get<double>());
+            fishery.setFishStock(modelParams.at("initialFishStock").get<double>());
+            industry.setFishPrice(modelParams.at("fishPrice").get<double>());
+            industry.setFishingCost(modelParams.at("fishingCost").get<double>());
+            industry.setStockReturnRate(modelParams.at("stockReturnRate").get<double>());
+            industry.setCatchStockingRate(modelParams.at("catchStockingRate").get<double>());
+            industry.setHarvestingEffort(modelParams.at("initialHarvestingEffort").get<double>());
+            industry.setFishMarketStock(modelParams.at("initialFishMarketStock").get<double>());
+        }
+        f.close();
+        return true;
+    }
+    catch (json::parse_error& e) {
+        std::cerr << "Error: Failed to parse JSON file: " << filename << "\n" << e.what() << std::endl;
+        f.close();
+        return false;
+    }
+    catch (json::exception& e) {
+        std::cerr << "Error: Missing parameter in JSON file: " << filename << "\n" << e.what() << std::endl;
+        f.close();
+        return false;
+    }
+    catch (std::exception& e) {
+        std::cerr << "An unexpected error occurred: " << e.what() << std::endl;
+        f.close();
+        return false;
+    }
+}
+
 /**
  * @brief Gets the current working directory.
  * @return A string with the path to the current working directory.
  */
-std::string getCurrentWorkingDirectory() {
+std::string getCurrentWorkingDirectory() 
+{
     char buff[FILENAME_MAX];
-    if (GetCurrentDir(buff, FILENAME_MAX)) {
+    if (GetCurrentDir(buff, FILENAME_MAX)) 
+    {
         std::string current_working_dir(buff);
         return current_working_dir;
     }
-    // Return a fallback message if CWD can't be found
+    //return a fallback message if CWD can't be found
     return "[current application directory]";
+}
+
+/**
+ * @brief Gets the current date and time as a string for filenames.
+ * @return A string formatted as YYYYMMDD_HHMMSS.
+ */
+std::string getCurrentTimestamp() 
+{
+    auto now = std::chrono::system_clock::now();
+    auto in_time_t = std::chrono::system_clock::to_time_t(now);
+
+    std::stringstream ss;
+    std::tm buf;
+
+#ifdef _WIN32
+    localtime_s(&buf, &in_time_t); //windows
+#else
+    localtime_r(&in_time_t, &buf); //POSIX
+#endif
+
+    ss << std::put_time(&buf, "%Y%m%d_%H%M%S");
+    return ss.str();
 }
 
 /*  @brief Simulates a growth and harvesting step in the fishery
@@ -111,7 +203,8 @@ int main()
 
 
         //data logging
-        std::string filename = "simple_model_simulation.csv";
+        std::string timestamp = getCurrentTimestamp();
+        std::string filename = "simple_model_simulation_" + timestamp + ".csv";
         CSVManager logger;
         logger.open("simple_model_simulation.csv");
         logger.writeHeader("Year,FishStock_tons"); 
@@ -149,7 +242,8 @@ int main()
         double currentTime = 0.0;
 
         //data logging
-        std::string filename = "delay_model_simulation.csv";
+        std::string timestamp = getCurrentTimestamp();
+        std::string filename = "delay_model_simulation_" + timestamp + ".csv"; // Store filename
         CSVManager logger;
         logger.open("delay_model_simulation.csv");
         logger.writeHeader("Time_Year,Population_n,Effort_E,MarketStock_S");
