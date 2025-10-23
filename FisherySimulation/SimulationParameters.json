@@ -18,5 +18,29 @@
 		"catchStockingRate": 0.5,
 		"initialHarvestingEffort": 0.4,
 		"initialFishMarketStock": 0.1
+	},
+	"ageStructuredModel": {
+		"simulationYears": 50,
+		"maxAge": 5,
+		"naturalMortality": 1.35,
+		"fishingMortality": 0.5,
+		"vb_Linf": 17.0,
+		"vb_k": 1.39,
+		"vb_t0": -0.1,
+		"lw_a": 0.0041,
+		"lw_b": 3.1818,
+		"maturity_A50": 1.0,
+		"maturity_k": 20.0,
+		"selectivity_A50": 1.5,
+		"selectivity_k": 10.0,
+		"constantRecruitment": 200000.0,
+		"initialNumbers": [
+			200000.0,
+			100000.0,
+			50000.0,
+			25000.0,
+			10000.0,
+			5000.0
+		]
 	}
 }

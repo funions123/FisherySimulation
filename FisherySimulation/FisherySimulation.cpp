@@ -22,7 +22,7 @@ using json = nlohmann::json;
  * @param filename The name of the JSON configuration file.
  * @param fishery The fishery object to populate.
  * @param industry The fishing industry object to populate.
- * @param modelChoice 1 for Simple Model, 2 for Delay Model.
+ * @param modelChoice 1 for Simple Model, 2 for Delay Model 3 for Age-Structured Model.
  * @param outSimYears (Output) The number of simulation years.
  * @param outStepsPerYear (Output) The number of steps per year (for delay model).
  * @return True if parameters were loaded successfully, false otherwise.
@@ -30,7 +30,8 @@ using json = nlohmann::json;
 bool loadParametersFromJSON(const std::string& filename, Fishery& fishery, FishingIndustry& industry, int modelChoice, int& outSimYears, int& outStepsPerYear)
 {
     std::ifstream f(filename);
-    if (!f.is_open()) {
+    if (!f.is_open()) 
+    {
         std::cerr << "Error: Could not open parameter file: " << filename << std::endl;
         return false;
     }
@@ -38,7 +39,8 @@ bool loadParametersFromJSON(const std::string& filename, Fishery& fishery, Fishi
     try {
         json params = json::parse(f);
 
-        if (modelChoice == 1) {
+        if (modelChoice == 1) 
+        {
             auto modelParams = params.at("simpleModel");
             outSimYears = modelParams.at("simulationYears").get<int>();
             fishery.setSimpleCarryingCapacity(modelParams.at("carryingCapacity").get<double>());
@@ -46,7 +48,8 @@ bool loadParametersFromJSON(const std::string& filename, Fishery& fishery, Fishi
             fishery.setFishStock(modelParams.at("initialFishStock").get<double>());
             industry.setSimpleHarvestRate(modelParams.at("harvestRate").get<double>());
         }
-        else if (modelChoice == 2) {
+        else if (modelChoice == 2) 
+        {
             auto modelParams = params.at("delayModel");
             outSimYears = modelParams.at("simulationYears").get<int>();
             outStepsPerYear = modelParams.at("stepsPerYear").get<int>();
@@ -60,21 +63,58 @@ bool loadParametersFromJSON(const std::string& filename, Fishery& fishery, Fishi
             industry.setHarvestingEffort(modelParams.at("initialHarvestingEffort").get<double>());
             industry.setFishMarketStock(modelParams.at("initialFishMarketStock").get<double>());
         }
+        else if (modelChoice == 3) 
+        {
+            auto modelParams = params.at("ageStructuredModel");
+            outSimYears = modelParams.at("simulationYears").get<int>();
+            int maxAge = modelParams.at("maxAge").get<int>();
+
+            fishery.setAgeModelParams(
+                maxAge,
+                modelParams.at("naturalMortality").get<double>(),
+                modelParams.at("vb_Linf").get<double>(),
+                modelParams.at("vb_k").get<double>(),
+                modelParams.at("vb_t0").get<double>(),
+                modelParams.at("lw_a").get<double>(),
+                modelParams.at("lw_b").get<double>(),
+                modelParams.at("maturity_A50").get<double>(),
+                modelParams.at("maturity_k").get<double>(),
+                modelParams.at("constantRecruitment").get<double>()
+            );
+
+            industry.setAgeModelParams(
+                modelParams.at("fishingMortality").get<double>(),
+                modelParams.at("selectivity_A50").get<double>(),
+                modelParams.at("selectivity_k").get<double>()
+            );
+
+            std::vector<double> initialNumbers = modelParams.at("initialNumbers").get<std::vector<double>>();
+            if (initialNumbers.size() != maxAge + 1)
+            {
+                std::cout << "Error: 'initialNumbers' array size in JSON (" << initialNumbers.size()
+                    << ") does not match 'maxAge' + 1 (" << (maxAge + 1) << ")." << std::endl;
+                return false;
+            }
+            fishery.setInitialNumbers(initialNumbers);
+        }
         f.close();
         return true;
     }
-    catch (json::parse_error& e) {
-        std::cerr << "Error: Failed to parse JSON file: " << filename << "\n" << e.what() << std::endl;
+    catch (json::parse_error& e) 
+    {
+        std::cout << "Error: Failed to parse JSON file: " << filename << "\n" << e.what() << std::endl;
         f.close();
         return false;
     }
-    catch (json::exception& e) {
-        std::cerr << "Error: Missing parameter in JSON file: " << filename << "\n" << e.what() << std::endl;
+    catch (json::exception& e) 
+    {
+        std::cout << "Error: Missing parameter in JSON file: " << filename << "\n" << e.what() << std::endl;
         f.close();
         return false;
     }
-    catch (std::exception& e) {
-        std::cerr << "An unexpected error occurred: " << e.what() << std::endl;
+    catch (std::exception& e) 
+    {
+        std::cout << "An unexpected error occurred: " << e.what() << std::endl;
         f.close();
         return false;
     }
@@ -169,22 +209,93 @@ void DelayEquationModelStep(Fishery& fishery, FishingIndustry& fishingindustry, 
     return;
 }
 
+/**
+ * @brief Simulates one year step of the Age-Structured Model.
+ * @param fishery The fishery object (contains state and bio params).
+ * @param industry The industry object (contains fishing params).
+ * @return The total catch in biomass for the year.
+ */
+double AgeStructuredModelStep(Fishery& fishery, const FishingIndustry& industry) 
+{
+    int maxAge = fishery.getMaxAge();
+    std::vector<double> N_start = fishery.getNumbersAtAge(); //numbers at start of year
+    std::vector<double> N_end(maxAge + 1); //numbers at end of year
+    double totalCatchBiomass = 0.0;
+    double M = fishery.getNaturalMortality();
+    double F_max = industry.getFishingMortality();
+
+    // Loop from age 1 to maxAge - 1
+    for (int age = 1; age < maxAge; ++age) 
+    {
+        double sel = industry.getSelectivityAtAge(age - 1); //selectivity of the cohort from the previous age
+        double F = F_max * sel;
+        double Z = M + F; //total mortality
+        N_end[age] = N_start[age - 1] * std::exp(-Z);
+
+        //baranov catch equation (biomass)
+        totalCatchBiomass += (F / Z) * (1.0 - std::exp(-Z)) * N_start[age - 1] * fishery.getWeightAtAge(age - 1);
+    }
+
+    //handle the plus group (age maxAge)
+    double sel_recruit = industry.getSelectivityAtAge(maxAge - 1);
+    double F_recruit = F_max * sel_recruit;
+    double Z_recruit = M + F_recruit;
+    double recruits_to_plus_group = N_start[maxAge - 1] * std::exp(-Z_recruit);
+
+    double sel_plus = industry.getSelectivityAtAge(maxAge);
+    double F_plus = F_max * sel_plus;
+    double Z_plus = M + F_plus;
+    double survivors_from_plus_group = N_start[maxAge] * std::exp(-Z_plus);
+
+    //total fish in maxAge
+    N_end[maxAge] = recruits_to_plus_group + survivors_from_plus_group;
+
+    totalCatchBiomass += (F_recruit / Z_recruit) * (1.0 - std::exp(-Z_recruit)) * N_start[maxAge - 1] * fishery.getWeightAtAge(maxAge - 1);
+    totalCatchBiomass += (F_plus / Z_plus) * (1.0 - std::exp(-Z_plus)) * N_start[maxAge] * fishery.getWeightAtAge(maxAge);
+
+    //fish reproduction (constant recruitment)
+    N_end[0] = fishery.getConstantRecruitment();
+    fishery.setNumbersAtAge(N_end);
+
+    return totalCatchBiomass;
+}
+
 int main()
 {
     int choice = 0;
+    const std::string paramFilename = "parameters.json";
+    json params;
 
-    while (choice != 1 && choice != 2)
+    std::ifstream f(paramFilename);
+    if (!f.is_open()) {
+        std::cout << "Error: Could not open parameter file: " << paramFilename << std::endl;
+        std::cout << "Please ensure 'parameters.json' exists in the same directory." << std::endl;
+        return 1;
+    }
+
+    try {
+        params = json::parse(f);
+        f.close();
+    }
+    catch (json::parse_error& e) {
+        std::cout << "Error: Failed to parse JSON file: " << paramFilename << "\n" << e.what() << std::endl;
+        f.close();
+        return 1;
+    }
+
+    while (choice != 1 && choice != 2 && choice != 3)
     {
         //ask the user which model to use
         std::cout << "Select a fishery simulation model:" << std::endl;
         std::cout << "1. Simple Logistic Model" << std::endl;
         std::cout << "2. Delay Equation Model" << std::endl;
-        std::cout << "Enter your choice (1 or 2): ";
+        std::cout << "3. Age-Structured Model" << std::endl;
+        std::cout << "Enter your choice (1, 2, or 3): ";
         std::cin >> choice;
 
         if (std::cin.fail() || (choice != 1 && choice != 2))
         {
-            std::cout << "\nInvalid choice. Please enter 1 or 2.\n" << std::endl;
+            std::cout << "\nInvalid choice. Please enter 1, 2, or 3.\n" << std::endl;
             std::cin.clear(); //clear the error flag on cin.
             //discard the rest of the line to handle invalid input.
             std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
@@ -200,7 +311,13 @@ int main()
         Fishery myFishery = Fishery();
         FishingIndustry myFishingIndustry = FishingIndustry();
         int simulationYears = 15;
+        int stepsPerYear = 0;
 
+        if (!loadParametersFromJSON(params, myFishery, myFishingIndustry, 1, simulationYears, stepsPerYear)) 
+        {
+            std::cout << "Error loading simple model parameters. Exiting." << std::endl;
+            return 1;
+        }
 
         //data logging
         std::string timestamp = getCurrentTimestamp();
@@ -208,12 +325,6 @@ int main()
         CSVManager logger;
         logger.open("simple_model_simulation.csv");
         logger.writeHeader("Year,FishStock_tons"); 
-        
-        //test init
-        myFishery.setSimpleCarryingCapacity(12000.0); //12k tons
-        myFishery.setSimpleReproductionRate(1.0);
-        myFishery.setFishStock(10000.0); //10k tons
-        myFishingIndustry.setSimpleHarvestRate(2000.0); //2k tons
 
         auto start = std::chrono::high_resolution_clock::now();
 
@@ -237,7 +348,6 @@ int main()
         printf("Simulation duration (ms): %f\n", duration.count());
 
         logger.close();
-        
 
         std::cout << "\nSimulation results saved to:\n" << getCurrentWorkingDirectory() << "/" << filename << std::endl;
     }
@@ -251,24 +361,18 @@ int main()
         double timeStep = 1.0 / stepsPerYear;
         double currentTime = 0.0;
 
+        if (!loadParametersFromJSON(params, myFishery, myFishingIndustry, 2, simulationYears, stepsPerYear)) 
+        {
+            std::cout << "Error loading delay model parameters. Exiting." << std::endl;
+            return 1;
+        }
+
         //data logging
         std::string timestamp = getCurrentTimestamp();
         std::string filename = "delay_model_simulation_" + timestamp + ".csv"; // Store filename
         CSVManager logger;
         logger.open("delay_model_simulation.csv");
         logger.writeHeader("Time_Year,Population_n,Effort_E,MarketStock_S");
-
-        //test init based on sample parameters from the paper
-        myFishery.setSimpleReproductionRate(1.0);
-        myFishery.setCatchability(2.0);
-        myFishery.setFishStock(0.4);
-
-        myFishingIndustry.setFishPrice(7.0);
-        myFishingIndustry.setFishingCost(1.0);
-        myFishingIndustry.setStockReturnRate(2.0);      //delta
-        myFishingIndustry.setCatchStockingRate(0.5);    //eta
-        myFishingIndustry.setHarvestingEffort(0.4);     //effort (E)
-        myFishingIndustry.setFishMarketStock(0.1);      //market stock (S)
 
         auto start = std::chrono::high_resolution_clock::now();
 
@@ -294,6 +398,56 @@ int main()
         printf("Simulation duration (ms): %f\n", duration.count());
 
         logger.close();
+        std::cout << "\nSimulation results saved to:\n" << getCurrentWorkingDirectory() << "/" << filename << std::endl;
+    }
+    else if (choice == 3)
+    {
+        // --- Age-Structured Model Simulation ---
+        Fishery myFishery = Fishery();
+        FishingIndustry myFishingIndustry = FishingIndustry();
+        int simulationYears = 0;
+        int stepsPerYear = 0;
+
+        if (!loadParametersFromJSON(params, myFishery, myFishingIndustry, 3, simulationYears, stepsPerYear)) 
+        {
+            std::cerr << "Error loading age-structured model parameters. Exiting." << std::endl;
+            return 1;
+        }
+
+        std::string timestamp ="_" + getCurrentTimestamp() : "";
+        std::string filename = "age_structured_simulation" + timestamp + ".csv";
+        CSVManager logger;
+        logger.open(filename);
+        logger.writeHeader("Year,TotalBiomass,SpawningStockBiomass,TotalCatch");
+
+        auto start = std::chrono::high_resolution_clock::now();
+
+        std::cout << "--- Age-Structured Model Simulation ---" << std::endl;
+        printf("Year | Total Biomass | Spawning Biomass | Total Catch (Biomass)\n");
+        printf("----------------------------------------------------------------------\n");
+
+        double initialTotalBiomass = myFishery.getTotalBiomass();
+        double initialSSB = myFishery.getSpawningStockBiomass();
+        printf("%4d | %15.2f | %18.2f | %20.2f\n", 0, initialTotalBiomass, initialSSB, 0.0);
+        logger.writeRow(0, initialTotalBiomass, initialSSB, 0.0);
+
+        for (int year = 1; year <= simulationYears; ++year) 
+        {
+            double totalCatch = AgeStructuredModelStep(myFishery, myFishingIndustry);
+
+            double totalBiomass = myFishery.getTotalBiomass();
+            double ssb = myFishery.getSpawningStockBiomass();
+
+            printf("%4d | %15.2f | %18.2f | %20.2f\n", year, totalBiomass, ssb, totalCatch);
+            logger.writeRow(year, totalBiomass, ssb, totalCatch);
+        }
+        logger.close();
+
+        auto end = std::chrono::high_resolution_clock::now();
+        std::chrono::duration<double, std::milli> duration = end - start;
+
+        printf("Simulation duration (ms): %f\n", duration.count());
+
         std::cout << "\nSimulation results saved to:\n" << getCurrentWorkingDirectory() << "/" << filename << std::endl;
     }
 

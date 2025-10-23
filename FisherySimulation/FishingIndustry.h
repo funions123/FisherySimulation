@@ -12,6 +12,9 @@ public:
 		stockReturnRate = 0;
 		fishPrice = 0;
 		fishingCost = 0;
+		fishingMortality = 0;
+		selectivity_A50 = 0;
+		selectivity_k = 0;
 	}
 
 	//Harvesting rate in tons for the simplified model
@@ -42,6 +45,26 @@ public:
 	const double getFishingCost() { return fishingCost; };
 	void setFishingCost(double newFishingCost) { fishingCost = newFishingCost; }
 
+	/**
+	 * @brief Sets the core fishing parameters for the age-structured model.
+	 */
+	void setAgeModelParams(double F, double sel50, double selk) 
+	{
+		fishingMortality = F;
+		selectivity_A50 = sel50;
+		selectivity_k = selk;
+	}
+
+	/**
+	 * @brief Calculates the fishing selectivity at a given age (logistic curve).
+	 */
+	double getSelectivityAtAge(int age) const
+	{
+		return 1.0 / (1.0 + std::exp(-selectivity_k * (age - selectivity_A50)));
+	}
+
+	double getFishingMortality() const { return fishingMortality; }
+
 private:
 
 	//Simple Model Variables
@@ -70,5 +93,18 @@ private:
 
 	//the cost per effort of fishing
 	double fishingCost;
+
+	//the total mortality from fishing activity
+	double fishingMortality;
+
+	//the age at 50 percent selectivity
+	//the age at which half of all fish are caught by the fishing gear
+	//fishing nets are specifically designed to allow small/young fish to escape
+	double selectivity_A50;
+
+	//a parameter representing the relationship between fishing gear selection and fish length
+	//specificially, a high k means the fishing gear sharply goes from catching no fish at lower ages to catching
+	//all fish at the A_50 age
+	double selectivity_k;
 };
 
