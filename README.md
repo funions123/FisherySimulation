@@ -2,18 +2,16 @@
 
 # Project Status
 Command-line Interface - Fully Implemented
+Core Simulation Loop - Fully Implemented
+Simple Logistic Model - Fully Implemented
+Delay Equation Model - Fully Implemented
+Age-structured operating model - Fully Implemented
+JSON Parameter Parse Functionality - Fully Implemented
+CSV Data logging - Fully Implemented
 
-Core Simulation Loop - Mostly Implemented
-
-Simple Logistic Model - Mostly Implemented
-
-Delay Equation Model - Mostly Implemented
-
-JABBA-based Model - Not yet started
-
-JSON Parameter Parse Functionality - Not yet started
-
-Simulation Validation and Tuning - Not yet started
+MAJOR TODO:
+JABBA-based Validation Testing
+Simulation Validation and Tuning
 
 More details on the Trello board.
 - https://trello.com/b/SfdKqYDU/fishery-simulator-management-board
@@ -29,6 +27,7 @@ Alternatively, you can compile the raw source using any C++ compiler if you are 
 
 # Usage
 To use this simulator, simply follow the command-line prompts.
+To edit run parameters, edit the values inside parameters.json.
 
 # Architecture Overview
 Main data classes: Fishery.h and FishingIndustry.h
@@ -39,8 +38,14 @@ Core program loop: FisherySimulation.cpp
 - This file also contains the simulation algorithms, implemented in the form of growth value functions.
 
 Simulation algorithms: FisherySimulation.cpp
-- Three algorithms are implemented as growth value functions
+- Three algorithms are implemented as
 	1. A simple model using logistic growth
 	2. A model using infinite delay equations
-	3. A model using the JABBA framework
+	3. An age-structured operating model
 - The JABBA framework repo can be found here: https://github.com/jabbamodel/JABBA
+
+Auxilliary class: CSVManager.h
+- Helper class to handle CSV data logging.
+
+json.h
+- Slightly modified version of the nlohmann all-in-one header JSON library.
