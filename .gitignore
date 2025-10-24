@@ -363,3 +363,4 @@ MigrationBackup/
 FodyWeavers.xsd
 *.csv
 /FisherySimulation/filename
+/FisherySimulation/Simulation Runs.zip
