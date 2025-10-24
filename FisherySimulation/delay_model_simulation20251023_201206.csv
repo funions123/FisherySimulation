@@ -1,3 +1,21 @@
+# Simulation Log
+# Model: Delay Equation Model
+# Timestamp: 2025-10-23 20:12:06
+# Parameters: 
+#   {
+#       "catchStockingRate": 0.5,
+#       "catchability": 2.0,
+#       "fishPrice": 7.0,
+#       "fishingCost": 1.0,
+#       "initialFishMarketStock": 0.1,
+#       "initialFishStock": 0.4,
+#       "initialHarvestingEffort": 0.4,
+#       "reproductionRate": 1.0,
+#       "simulationYears": 20,
+#       "stepsPerYear": 100,
+#       "stockReturnRate": 2.0
+#   }
+# 
 Time_Year,Population_n,Effort_E,MarketStock_S
 0.00000000,0.40000000,0.40000000,0.10000000
 0.01000000,0.39920000,0.42120000,0.09960000
@@ -2000,3 +2018,5 @@ Time_Year,Population_n,Effort_E,MarketStock_S
 19.98000000,0.05510980,0.00621092,0.00013979
 19.99000000,0.05562368,0.00619234,0.00014042
 20.00000000,0.05614209,0.00617419,0.00014106
+# 
+# Simulation duration (ms): 52.738100

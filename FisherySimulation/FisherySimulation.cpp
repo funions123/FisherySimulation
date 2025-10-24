@@ -27,18 +27,9 @@ using json = nlohmann::json;
  * @param outStepsPerYear (Output) The number of steps per year (for delay model).
  * @return True if parameters were loaded successfully, false otherwise.
  */
-bool loadParametersFromJSON(const std::string& filename, Fishery& fishery, FishingIndustry& industry, int modelChoice, int& outSimYears, int& outStepsPerYear)
+bool loadParametersFromJSON(const json& params, Fishery& fishery, FishingIndustry& industry, int modelChoice, int& outSimYears, int& outStepsPerYear)
 {
-    std::ifstream f(filename);
-    if (!f.is_open()) 
-    {
-        std::cerr << "Error: Could not open parameter file: " << filename << std::endl;
-        return false;
-    }
-
     try {
-        json params = json::parse(f);
-
         if (modelChoice == 1) 
         {
             auto modelParams = params.at("simpleModel");
@@ -97,25 +88,21 @@ bool loadParametersFromJSON(const std::string& filename, Fishery& fishery, Fishi
             }
             fishery.setInitialNumbers(initialNumbers);
         }
-        f.close();
         return true;
     }
     catch (json::parse_error& e) 
     {
-        std::cout << "Error: Failed to parse JSON file: " << filename << "\n" << e.what() << std::endl;
-        f.close();
+        std::cout << "Error: Failed to parse JSON file:\n" << e.what() << std::endl;
         return false;
     }
     catch (json::exception& e) 
     {
-        std::cout << "Error: Missing parameter in JSON file: " << filename << "\n" << e.what() << std::endl;
-        f.close();
+        std::cout << "Error: Missing parameter in JSON file:\n" << e.what() << std::endl;
         return false;
     }
     catch (std::exception& e) 
     {
         std::cout << "An unexpected error occurred: " << e.what() << std::endl;
-        f.close();
         return false;
     }
 }
@@ -155,6 +142,27 @@ std::string getCurrentTimestamp()
 #endif
 
     ss << std::put_time(&buf, "%Y%m%d_%H%M%S");
+    return ss.str();
+}
+
+/**
+ * @brief Gets the current date and time as a human-readable string for logging.
+ * @return A string formatted as YYYY-MM-DD HH:MM:SS
+ */
+std::string getReadableTimestamp() 
+{
+    auto now = std::chrono::system_clock::now();
+    auto in_time_t = std::chrono::system_clock::to_time_t(now);
+    std::stringstream ss;
+    std::tm buf;
+
+#ifdef _WIN32
+    localtime_s(&buf, &in_time_t); //windows
+#else
+    localtime_r(&in_time_t, &buf); //posix
+#endif
+
+    ss << std::put_time(&buf, "%Y-%m-%d %H:%M:%S");
     return ss.str();
 }
 
@@ -267,17 +275,26 @@ int main()
     json params;
 
     std::ifstream f(paramFilename);
-    if (!f.is_open()) {
+    if (!f.is_open()) 
+    {
         std::cout << "Error: Could not open parameter file: " << paramFilename << std::endl;
         std::cout << "Please ensure 'parameters.json' exists in the same directory." << std::endl;
         return 1;
     }
 
-    try {
+    try 
+    {
         params = json::parse(f);
         f.close();
     }
-    catch (json::parse_error& e) {
+    catch (json::parse_error& e) 
+    {
+        std::cout << "Error: Failed to parse JSON file: " << paramFilename << "\n" << e.what() << std::endl;
+        f.close();
+        return 1;
+    }
+    catch (json::exception& e)
+    {
         std::cout << "Error: Failed to parse JSON file: " << paramFilename << "\n" << e.what() << std::endl;
         f.close();
         return 1;
@@ -293,7 +310,7 @@ int main()
         std::cout << "Enter your choice (1, 2, or 3): ";
         std::cin >> choice;
 
-        if (std::cin.fail() || (choice != 1 && choice != 2))
+        if (std::cin.fail() || (choice != 1 && choice != 2 && choice != 3))
         {
             std::cout << "\nInvalid choice. Please enter 1, 2, or 3.\n" << std::endl;
             std::cin.clear(); //clear the error flag on cin.
@@ -323,8 +340,22 @@ int main()
         std::string timestamp = getCurrentTimestamp();
         std::string filename = "simple_model_simulation_" + timestamp + ".csv";
         CSVManager logger;
-        logger.open("simple_model_simulation.csv");
-        logger.writeHeader("Year,FishStock_tons"); 
+        logger.open("filename");
+
+        logger.writeComment("Simulation Log");
+        logger.writeComment("Model: Simple Logistic Model");
+        logger.writeComment("Timestamp: " + getReadableTimestamp());
+        logger.writeComment("Parameters: ");
+        std::stringstream ss;
+        ss << params.at("simpleModel").dump(4);
+        std::string line;
+        while (std::getline(ss, line)) 
+        {
+            logger.writeComment("  " + line);
+        }
+        logger.writeComment(""); 
+
+        logger.writeHeader("Year,FishStock_tons");
 
         auto start = std::chrono::high_resolution_clock::now();
 
@@ -335,7 +366,8 @@ int main()
         logger.writeRow(0, myFishery.getFishStock()); //log initial state
 
         //run the simulation loop
-        for (int year = 1; year <= simulationYears; ++year) {
+        for (int year = 1; year <= simulationYears; ++year) 
+        {
             double growth = SimpleModelGrowthAmount(myFishery, myFishingIndustry);
             myFishery.setFishStock(std::max(0.0, myFishery.getFishStock() + growth));
             printf("%4d | %f\n", year, myFishery.getFishStock());
@@ -344,8 +376,12 @@ int main()
 
         auto end = std::chrono::high_resolution_clock::now();
         std::chrono::duration<double, std::milli> duration = end - start;
+        std::string durationString = "Simulation duration (ms): " + std::to_string(duration.count());
 
-        printf("Simulation duration (ms): %f\n", duration.count());
+        printf("%s\n", durationString.c_str());
+
+        logger.writeComment("");
+        logger.writeComment(durationString);
 
         logger.close();
 
@@ -369,9 +405,22 @@ int main()
 
         //data logging
         std::string timestamp = getCurrentTimestamp();
-        std::string filename = "delay_model_simulation_" + timestamp + ".csv"; // Store filename
+        std::string filename = "delay_model_simulation" + timestamp + ".csv"; // Store filename
         CSVManager logger;
-        logger.open("delay_model_simulation.csv");
+        logger.open(filename);
+
+        logger.writeComment("Simulation Log");
+        logger.writeComment("Model: Delay Equation Model");
+        logger.writeComment("Timestamp: " + getReadableTimestamp());
+        logger.writeComment("Parameters: ");
+        std::stringstream ss;
+        ss << params.at("delayModel").dump(4); 
+        std::string line;
+        while (std::getline(ss, line)) 
+        {
+            logger.writeComment("  " + line);
+        }
+        logger.writeComment("");
         logger.writeHeader("Time_Year,Population_n,Effort_E,MarketStock_S");
 
         auto start = std::chrono::high_resolution_clock::now();
@@ -383,8 +432,10 @@ int main()
         logger.writeRow(currentTime, myFishery.getFishStock(), myFishingIndustry.getHarvestingEffort(), myFishingIndustry.getFishMarketStock()); // Log initial state
 
         //run the simulation loop
-        for (int year = 1; year <= simulationYears; ++year) {
-            for (int i = 0; i < stepsPerYear; ++i) {
+        for (int year = 1; year <= simulationYears; ++year) 
+        {
+            for (int i = 0; i < stepsPerYear; ++i) 
+            {
                 DelayEquationModelStep(myFishery, myFishingIndustry, timeStep);
                 currentTime += timeStep;
                 logger.writeRow(currentTime, myFishery.getFishStock(), myFishingIndustry.getHarvestingEffort(), myFishingIndustry.getFishMarketStock());
@@ -394,8 +445,12 @@ int main()
 
         auto end = std::chrono::high_resolution_clock::now();
         std::chrono::duration<double, std::milli> duration = end - start;
+        std::string durationString = "Simulation duration (ms): " + std::to_string(duration.count());
 
-        printf("Simulation duration (ms): %f\n", duration.count());
+        printf("%s\n", durationString.c_str());
+
+        logger.writeComment("");
+        logger.writeComment(durationString);
 
         logger.close();
         std::cout << "\nSimulation results saved to:\n" << getCurrentWorkingDirectory() << "/" << filename << std::endl;
@@ -410,14 +465,28 @@ int main()
 
         if (!loadParametersFromJSON(params, myFishery, myFishingIndustry, 3, simulationYears, stepsPerYear)) 
         {
-            std::cerr << "Error loading age-structured model parameters. Exiting." << std::endl;
+            std::cout << "Error loading age-structured model parameters. Exiting." << std::endl;
             return 1;
         }
 
-        std::string timestamp ="_" + getCurrentTimestamp() : "";
+        std::string timestamp = getCurrentTimestamp();
         std::string filename = "age_structured_simulation" + timestamp + ".csv";
         CSVManager logger;
         logger.open(filename);
+
+        logger.writeComment("Simulation Log");
+        logger.writeComment("Model: Age-Structured Model");
+        logger.writeComment("Timestamp: " + getReadableTimestamp());
+        logger.writeComment("Parameters: ");
+        std::stringstream ss;
+        ss << params.at("ageStructuredModel").dump(4);
+        std::string line;
+        while (std::getline(ss, line)) 
+        {
+            logger.writeComment("  " + line);
+        }
+        logger.writeComment("");
+
         logger.writeHeader("Year,TotalBiomass,SpawningStockBiomass,TotalCatch");
 
         auto start = std::chrono::high_resolution_clock::now();
@@ -441,12 +510,16 @@ int main()
             printf("%4d | %15.2f | %18.2f | %20.2f\n", year, totalBiomass, ssb, totalCatch);
             logger.writeRow(year, totalBiomass, ssb, totalCatch);
         }
-        logger.close();
-
         auto end = std::chrono::high_resolution_clock::now();
         std::chrono::duration<double, std::milli> duration = end - start;
+        std::string durationString = "Simulation duration (ms): " + std::to_string(duration.count());
 
-        printf("Simulation duration (ms): %f\n", duration.count());
+        printf("%s\n", durationString.c_str());
+
+        logger.writeComment("");
+        logger.writeComment(durationString);
+
+        logger.close();
 
         std::cout << "\nSimulation results saved to:\n" << getCurrentWorkingDirectory() << "/" << filename << std::endl;
     }

@@ -61,6 +61,18 @@ public:
     }
 
     /**
+     * @brief Writes a commented line to the CSV file.
+     * @param text The text to write, which will be prefixed with "# ".
+     */
+    void writeComment(const std::string& text) 
+    {
+        if (fileStream.is_open()) 
+        {
+            fileStream << commentPrefix << text << "\n";
+        }
+    }
+
+    /**
      * @brief Writes a row of data for the Simple Model.
      */
     void writeRow(int year, double fishStock)
@@ -86,8 +98,23 @@ public:
         }
     }
 
+    /**
+     * @brief Writes a row of data for the Age Structured Model.
+     */
+    void writeRow(int year, double totalBiomass, double ssb, double totalCatch) 
+    {
+        if (fileStream.is_open()) 
+        {
+            fileStream << year << separator
+                << totalBiomass << separator
+                << ssb << separator
+                << totalCatch << "\n";
+        }
+    }
+
 private:
     std::ofstream fileStream;
     std::string separator = ",";
+    std::string commentPrefix = "# ";
 
 };

@@ -136,7 +136,7 @@
     <ClCompile Include="FisherySimulation.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="SimulationParameters.json" />
+    <None Include="parameters.json" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
