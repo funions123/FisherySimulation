@@ -15,22 +15,12 @@ JSON Parameter Parse Functionality - Fully Implemented
 
 CSV Data logging - Fully Implemented
 
-MAJOR TODO:
-JABBA-based Validation Testing
-
-Simulation Validation and Tuning
-
-More details on the Trello board.
-- https://trello.com/b/SfdKqYDU/fishery-simulator-management-board
-
 # Installation Instructions
 To build and run this repository, simply clone it into a folder then use the .sln file to create a Visual Studio project. 
 - You can drag-and-drop the .sln file into a Visual Studio window, and it will automatically prompt you to set up the project.
 Once this is done, you will be able to compile and run the project from source using the visual studio build/debug buttons.
 
-Alternatively, you can compile the raw source using any C++ compiler if you are proficient at that.
-
-- To be added: A complete build and install consisting of a command-line executable and portable data folder
+Alternatively, you can compile the raw source using any C++ compiler if you are proficient at that. Other than std libraries, no external dependencies are required.
 
 # Usage
 To use this simulator, simply follow the command-line prompts.
@@ -49,7 +39,6 @@ Simulation algorithms: FisherySimulation.cpp
 	1. A simple model using logistic growth
 	2. A model using infinite delay equations
 	3. An age-structured operating model
-- The JABBA framework repo can be found here: https://github.com/jabbamodel/JABBA
 
 Auxilliary class: CSVManager.h
 - Helper class to handle CSV data logging.
