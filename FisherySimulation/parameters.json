@@ -1,23 +1,25 @@
 {
 	"simpleModel": {
 		"simulationYears": 15,
-		"carryingCapacity": 12000.0,
+		"carryingCapacity": 15000.0,
 		"reproductionRate": 1.0,
 		"initialFishStock": 10000.0,
-		"harvestRate": 2000.0
+		"harvestRate": 2000.0,
+		"reproductionStdDev": 0.1
 	},
 	"delayModel": {
-		"simulationYears": 20,
+		"simulationYears": 50,
 		"stepsPerYear": 100,
 		"reproductionRate": 1.0,
-		"catchability": 2.0,
+		"catchability": 0.5,
 		"initialFishStock": 0.4,
 		"fishPrice": 7.0,
-		"fishingCost": 1.0,
+		"fishingCost": 1.25,
 		"stockReturnRate": 2.0,
 		"catchStockingRate": 0.5,
-		"initialHarvestingEffort": 0.4,
-		"initialFishMarketStock": 0.1
+		"initialHarvestingEffort": 0.2,
+		"initialFishMarketStock": 0.1,
+		"catchabilityStdDev": 0.15
 	},
 	"ageStructuredModel": {
 		"simulationYears": 50,
@@ -32,7 +34,7 @@
 		"maturity_A50": 1.0,
 		"maturity_k": 20.0,
 		"selectivity_A50": 1.5,
-		"selectivity_k": 10.0,
+		"selectivity_k": 15.0,
 		"constantRecruitment": 200000.0,
 		"initialNumbers": [
 			200000.0,
@@ -41,6 +43,7 @@
 			25000.0,
 			10000.0,
 			5000.0
-		]
+		],
+		"recruitmentStdDev": 0.6
 	}
 }

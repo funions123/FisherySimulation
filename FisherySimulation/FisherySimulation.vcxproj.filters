@@ -29,11 +29,11 @@
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
+    <None Include="parameters.json" />
+  </ItemGroup>
+  <ItemGroup>
     <ClCompile Include="FisherySimulation.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="parameters.json" />
   </ItemGroup>
 </Project>

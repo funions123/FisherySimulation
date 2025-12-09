@@ -1,6 +1,7 @@
 #pragma once
 
 #include "json.h"
+#include <random>
 
 class Fishery
 {
@@ -19,7 +20,36 @@ public :
 		lw_a = 0; lw_b = 0;
 		maturity_A50 = 0; maturity_k = 0;
 		constantRecruitment = 0;
+
+		reproductionStdDev = 0.0;
+		catchabilityStdDev = 0.0;
+		recruitmentStdDev = 0.0;
+
+		std::random_device rd;
+		rng = std::mt19937(rd());
 	};
+
+	double getLogNormalRecruitment(double sigma) {
+		// create a normal distribution centered at 0
+		std::normal_distribution<double> dist(0.0, sigma);
+
+		// calculate the random fluctuation
+		double fluctuation = dist(rng);
+
+		// Apply Log-Normal noise: Recruitment = Constant * e^(fluctuation)
+		return constantRecruitment * std::exp(fluctuation);
+	}
+
+	/**
+	 * @brief Generates a random multiplier centered around 1.0 with a specific standard deviation.
+	 * @param sigma The standard deviation (e.g., 0.1 for 10% variability).
+	 */
+	double getStochasticMultiplier(double sigma) {
+		std::normal_distribution<double> dist(1.0, sigma);
+		double val = dist(rng);
+		// Safety clamp to prevent negative biology (optional but recommended)
+		return (val < 0.0) ? 0.0 : val;
+	}
 
 	//simple model variables
 	const double& getSimpleReproductionRate() { return reproductionRate; };
@@ -121,6 +151,37 @@ public :
 	double getNaturalMortality() const { return naturalMortality; }
 	double getConstantRecruitment() const { return constantRecruitment; }
 
+	void setReproductionStdDev(double sigma) { reproductionStdDev = sigma; }
+	double getReproductionStdDev() const { return reproductionStdDev; }
+
+	void setCatchabilityStdDev(double sigma) { catchabilityStdDev = sigma; }
+	double getCatchabilityStdDev() const { return catchabilityStdDev; }
+
+	void setRecruitmentStdDev(double sigma) { recruitmentStdDev = sigma; }
+	double getRecruitmentStdDev() const { return recruitmentStdDev; }
+
+	//returns a multiplier X ~ Normal(1.0, sigma)
+	//used for simple and delay models
+	double getNoisyMultiplier(double sigma)
+	{
+		if (sigma <= 0.0) return 1.0; // Deterministic fallback
+		std::normal_distribution<double> dist(1.0, sigma);
+		double val = dist(rng);
+		return (val < 0.0) ? 0.0 : val; // Clamp to 0 to prevent negative biology
+	}
+
+	//returns a recruitment R ~ LogNormal(ln(recruitment), sigma)
+	//used for age-structured model
+	double getNoisyRecruitment()
+	{
+		if (recruitmentStdDev <= 0.0) return constantRecruitment;
+
+		//log-normal formulation
+		//we want the median to be constantRecruitment, so we center the underlying normal at 0
+		std::normal_distribution<double> dist(0.0, recruitmentStdDev);
+		return constantRecruitment * std::exp(dist(rng));
+	}
+
 private:
 	//the current amount of fish stock in the fishery
 	double fishStock;
@@ -176,5 +237,11 @@ private:
 	//the number of new fish that are born each year
 	double constantRecruitment;
 
+	double reproductionStdDev;
+	double catchabilityStdDev;
+	double recruitmentStdDev;
+
+	//rng seed
+	std::mt19937 rng;
 };
 

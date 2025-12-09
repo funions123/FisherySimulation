@@ -133,10 +133,10 @@
     <ClInclude Include="FishingIndustry.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="FisherySimulation.cpp" />
+    <None Include="parameters.json" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="parameters.json" />
+    <ClCompile Include="FisherySimulation.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

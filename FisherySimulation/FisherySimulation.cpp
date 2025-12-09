@@ -22,7 +22,7 @@ using json = nlohmann::json;
  * @param filename The name of the JSON configuration file.
  * @param fishery The fishery object to populate.
  * @param industry The fishing industry object to populate.
- * @param modelChoice 1 for Simple Model, 2 for Delay Model 3 for Age-Structured Model.
+ * @param modelChoice 1 for Simple Model, 2 for Delay Model, 3 for Age-Structured Model.
  * @param outSimYears (Output) The number of simulation years.
  * @param outStepsPerYear (Output) The number of steps per year (for delay model).
  * @return True if parameters were loaded successfully, false otherwise.
@@ -38,6 +38,7 @@ bool loadParametersFromJSON(const json& params, Fishery& fishery, FishingIndustr
             fishery.setSimpleReproductionRate(modelParams.at("reproductionRate").get<double>());
             fishery.setFishStock(modelParams.at("initialFishStock").get<double>());
             industry.setSimpleHarvestRate(modelParams.at("harvestRate").get<double>());
+            fishery.setReproductionStdDev(modelParams.at("reproductionStdDev").get<double>());
         }
         else if (modelChoice == 2) 
         {
@@ -53,6 +54,7 @@ bool loadParametersFromJSON(const json& params, Fishery& fishery, FishingIndustr
             industry.setCatchStockingRate(modelParams.at("catchStockingRate").get<double>());
             industry.setHarvestingEffort(modelParams.at("initialHarvestingEffort").get<double>());
             industry.setFishMarketStock(modelParams.at("initialFishMarketStock").get<double>());
+            fishery.setCatchabilityStdDev(modelParams.at("catchabilityStdDev").get<double>());
         }
         else if (modelChoice == 3) 
         {
@@ -72,6 +74,8 @@ bool loadParametersFromJSON(const json& params, Fishery& fishery, FishingIndustr
                 modelParams.at("maturity_k").get<double>(),
                 modelParams.at("constantRecruitment").get<double>()
             );
+
+            fishery.setRecruitmentStdDev(modelParams.at("recruitmentStdDev").get<double>());
 
             industry.setAgeModelParams(
                 modelParams.at("fishingMortality").get<double>(),
@@ -175,8 +179,13 @@ std::string getReadableTimestamp()
 */
 double SimpleModelGrowthAmount(Fishery& fishery, FishingIndustry& fishingindustry)
 {
+    double noise = fishery.getNoisyMultiplier(fishery.getReproductionStdDev());
+
+    //apply noise to reproduction rate
+    double noisyRate = fishery.getSimpleReproductionRate() * noise;
+
     //calculate the natural growth of the fish stock
-    double naturalGrowth = fishery.getSimpleReproductionRate() * fishery.getFishStock() * (1 - fishery.getFishStock() / fishery.getSimpleCarryingCapacity());
+    double naturalGrowth = noisyRate * fishery.getFishStock() * (1 - fishery.getFishStock() / fishery.getSimpleCarryingCapacity());
 
     //calculate the impact of harvesting on the fish stock
     //this number CAN be negative
@@ -192,12 +201,14 @@ double SimpleModelGrowthAmount(Fishery& fishery, FishingIndustry& fishingindustr
 */
 void DelayEquationModelStep(Fishery& fishery, FishingIndustry& fishingindustry, double timeStep)
 {
+    double noise = fishery.getNoisyMultiplier(fishery.getCatchabilityStdDev());
+
     double n = fishery.getFishStock();
     double E = fishingindustry.getHarvestingEffort();
     double S = fishingindustry.getFishMarketStock();
 
     //step catch - equation 1
-    double currentCatch = fishery.getCatchability() * n * E;
+    double currentCatch = (fishery.getCatchability() * noise) * n * E;
 
     //calculate the rate of change for each variable
     //dn/dt = rn(1-n) - qnE
@@ -261,8 +272,8 @@ double AgeStructuredModelStep(Fishery& fishery, const FishingIndustry& industry)
     totalCatchBiomass += (F_recruit / Z_recruit) * (1.0 - std::exp(-Z_recruit)) * N_start[maxAge - 1] * fishery.getWeightAtAge(maxAge - 1);
     totalCatchBiomass += (F_plus / Z_plus) * (1.0 - std::exp(-Z_plus)) * N_start[maxAge] * fishery.getWeightAtAge(maxAge);
 
-    //fish reproduction (constant recruitment)
-    N_end[0] = fishery.getConstantRecruitment();
+    //fish reproduction (new log-normal noisy recruitment)
+    N_end[0] = fishery.getNoisyRecruitment();
     fishery.setNumbersAtAge(N_end);
 
     return totalCatchBiomass;
@@ -340,7 +351,7 @@ int main()
         std::string timestamp = getCurrentTimestamp();
         std::string filename = "simple_model_simulation_" + timestamp + ".csv";
         CSVManager logger;
-        logger.open("filename");
+        logger.open(filename);
 
         logger.writeComment("Simulation Log");
         logger.writeComment("Model: Simple Logistic Model");
@@ -397,6 +408,8 @@ int main()
         double timeStep = 1.0 / stepsPerYear;
         double currentTime = 0.0;
 
+        double fishStockAccum = 0.0;
+
         if (!loadParametersFromJSON(params, myFishery, myFishingIndustry, 2, simulationYears, stepsPerYear)) 
         {
             std::cout << "Error loading delay model parameters. Exiting." << std::endl;
@@ -441,14 +454,21 @@ int main()
                 logger.writeRow(currentTime, myFishery.getFishStock(), myFishingIndustry.getHarvestingEffort(), myFishingIndustry.getFishMarketStock());
             }
             printf("%4d | %14.4f | %10.4f | %16.4f\n", year, myFishery.getFishStock(), myFishingIndustry.getHarvestingEffort(), myFishingIndustry.getFishMarketStock());
+            fishStockAccum += myFishery.getFishStock();
         }
 
         auto end = std::chrono::high_resolution_clock::now();
         std::chrono::duration<double, std::milli> duration = end - start;
         std::string durationString = "Simulation duration (ms): " + std::to_string(duration.count());
 
+        std::string averageFishStockString = "Average fish stock level: " + std::to_string(fishStockAccum / simulationYears);
+
+        printf("%s\n", averageFishStockString.c_str());
+
         printf("%s\n", durationString.c_str());
 
+        logger.writeComment("");
+        logger.writeComment(averageFishStockString);
         logger.writeComment("");
         logger.writeComment(durationString);
 
